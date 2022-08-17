@@ -1,0 +1,14 @@
+[package]
+name = "span"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version="~3.2.8", features=["derive","env","regex","wrap_help","unicode"] }
+hyper = { version = "0.14", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version="1.0", features = ["derive"] }
+bincode = "1.2.1"
+error-chain = "0.12.4"
