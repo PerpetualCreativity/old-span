@@ -361,18 +361,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "neo-span"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "clap",
- "error-chain",
- "hyper",
- "serde",
- "tokio",
-]
-
-[[package]]
 name = "num_cpus"
 version = "1.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -567,6 +555,18 @@ checksum = "66d72b759436ae32898a2af0a14218dbf55efde3feeb170eb623637db85ee1e0"
 dependencies = [
  "libc",
  "winapi",
+]
+
+[[package]]
+name = "span"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "clap",
+ "error-chain",
+ "hyper",
+ "serde",
+ "tokio",
 ]
 
 [[package]]

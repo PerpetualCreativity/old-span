@@ -9,7 +9,7 @@ use crate::errors::*;
 pub fn build(folder: Folder) -> Result<Folder> {
     let mut command = Command::new("pandoc");
     command
-        .args(&["--to", "html5", "--standalone", "--metadata", "title=some"]);
+        .args(&["--to", "html5", "--standalone"]);
     let contents_fs = folder.folders.get(&OsString::from("contents")).chain_err(|| "Could not find folder 'contents'")?;
     let templates_fs = folder.folders.get(&OsString::from("templates")).chain_err(|| "Could not find folder 'templates'")?;
     contents_fs.clone().map(PathBuf::new(),&mut |filepath, contents| {
