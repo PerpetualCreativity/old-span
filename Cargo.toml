@@ -10,5 +10,8 @@ clap = { version="~3.2.8", features=["derive","env","regex","wrap_help","unicode
 hyper = { version = "0.14", features = ["full"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version="1.0", features = ["derive"] }
+serde_yaml = { version="0.9.9" }
 bincode = "1.2.1"
 error-chain = "0.12.4"
+tempfile = "3.3.0"
+globset = "0.4.9"

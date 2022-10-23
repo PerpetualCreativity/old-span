@@ -87,9 +87,63 @@ You can always override this logic by specifying a full path (starting with `sni
 
 You will need to populate `templates/default.html` with a default Pandoc template. A simple way to do this is by running `pandoc -D html > templates/default.html`.
 
-## settings (WIP)
+## configuration
 
-Currently there are no settings, but that will change soon.
+The configuration file is `./span.yml` (in your site folder). An example configuration is below.
+
+```yaml
+# '*' in files means "anything here"
+
+# ignore (do not process and do not run) matching files
+ignore:
+  - "drafts/*" # this will ignore files in the contents/drafts folder
+
+# do not process, only output matching files
+# if a file is specified in pre-run, that process
+# *is* run on the file and then that file is output
+passthrough:
+  - "raw/*" # this will pass-through files in the contents/raw folder
+
+# process matching files using the specified commands
+pre-run:
+  # span will run these commands, substituting %i for path to input files
+  # and %o for path to output files
+  # if %i is not in the command, span will pass the contents of the input
+  # file to stdin. if %o is not in the command string, span will use stdout
+  # as the output
+  - command: "vale"
+    files:
+      - "*.md"
+      - "*.txt"
+    error_on: "status" # default: stderr, possible values are stdout, stderr, status, none
+    replace: false # default: true
+  - command: "proselint"
+    files:
+      - "*.md"
+    error_on: "stdout"
+    replace: false
+  - command: "./tailwindcss -i %i -o %o --minify"
+    files:
+      - "main.css"
+    error_on: "none"
+    replace: true
+
+# pandoc filters to run on matching files
+filters:
+  - path: "~/scripts/pandoc-asciimath2tex"
+    files:
+      - "notes/math/*"
+      - "notes/physics/*"
+
+# extra args to pass to pandoc
+# span automatically passes --to=html5, --standalone, and --template=
+# (and --filter if necessary)
+extra_args:
+  - "--katex"
+
+# default template name to use
+default_template: default.html # default: default.html
+```
 
 ---
 

@@ -3,6 +3,7 @@ use std::{fs, env, path};
 
 mod vfs;
 mod args;
+mod config;
 mod build;
 mod errors { error_chain::error_chain!{} }
 
@@ -32,18 +33,20 @@ fn run() -> Result <()> {
             let cwd = env::current_dir().chain_err(|| "could not access current directory")?;
             env::set_current_dir(input.clone()).chain_err(|| format!("could not set directory to {:?}", input))?;
             let source = vfs::Folder::read(path::PathBuf::from("."))?;
-            let result = build::build(source)?;
+            let config_file = fs::File::open("./span.yml").chain_err(|| "could not open ./span.yml")?;
+            let config = serde_yaml::from_reader(config_file).chain_err(|| "./span.yml contains invalid config syntax")?;
+            let result = build::build(source, config)?;
             env::set_current_dir(cwd).chain_err(|| format!("could not set directory to {:?}", input))?;
-            if fs::metadata(output.clone()).is_err() {
+            if fs::metadata(output.clone()).is_ok() {
                 fs::remove_dir_all(output.clone()).chain_err(|| format!(
                     "could not delete previous output at {:?}",
                     output.clone()
                 ))?;
-                fs::create_dir(output.clone()).chain_err(|| format!(
-                    "could not create output directory {:?}",
-                    output.clone()
-                ))?;
             }
+            fs::create_dir(output.clone()).chain_err(|| format!(
+                "could not create output directory {:?}",
+                output.clone()
+            ))?;
             env::set_current_dir(output.clone()).chain_err(|| format!("could not set directory to {:?}", output))?;
             result.write(output)
         },
