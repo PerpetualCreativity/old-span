@@ -53,10 +53,10 @@ impl Folder {
                         .chain_err(|| format!("could not read contents of {:?}", p))?;
                     res.files.insert(p.file_name(), contents);
                 } else {
-                    bail!(format!(
+                    bail!(
                         "span can't handle symlinks yet. Symlink found at {:?}",
                         p.path()
-                    ));
+                    );
                 };
             }
             Ok(res)
@@ -117,10 +117,15 @@ impl Folder {
         F1: FnMut(PathBuf, Vec<u8>) -> Result<Option<(PathBuf, Vec<u8>)>>,
         F2: FnMut(PathBuf, Vec<u8>) -> Result<Option<(PathBuf, Vec<u8>)>>,
     {
-        use globset::{Glob, GlobSetBuilder};
+        use globset::{GlobBuilder, GlobSetBuilder};
         let mut builder = GlobSetBuilder::new();
         for s in globs {
-            builder.add(Glob::new(&s).chain_err(|| format!("couldn't create glob from {}", s))?);
+            builder.add(
+                GlobBuilder::new(&s)
+                    .literal_separator(true)
+                    .build()
+                    .chain_err(|| format!("couldn't create glob from {}", s))?,
+            );
         }
         let set = builder.build().chain_err(|| "couldn't create glob set")?;
         self.clone().map(PathBuf::new(), &mut |fp, c| {
@@ -170,8 +175,14 @@ impl Folder {
             t = t
                 .folders
                 .get_mut(c)
-                .ok_or(format!("failed to add file{:?}", fp))?;
+                .ok_or(format!("failed to add folder{:?}", c))?;
         }
+        t.files.insert(
+            fp.file_name()
+                .ok_or(format!("failed to add file{:?}", fp))?
+                .to_os_string(),
+            contents,
+        );
         Ok(())
     }
     /// Joins two folders. If there is overlap, the second folder's contents are used.
@@ -181,10 +192,10 @@ impl Folder {
         Ok(res)
     }
 
-    /// Gets the path to the "most matching" file.
+    /// Gets the path to the "most matching" file and its contents.
     /// If it can't find anything, returns None.
     /// See the README for details on the algorithm.
-    pub fn find(&self, file: PathBuf) -> Option<PathBuf> {
+    pub fn find(&self, file: PathBuf) -> Option<(PathBuf, Vec<u8>)> {
         let mut track = PathBuf::new();
         let mut folder = self;
         if let Some(parent) = file.parent() {
@@ -198,10 +209,10 @@ impl Folder {
                 }
             }
         }
-        for (name, _) in folder.clone().files {
+        for (name, contents) in folder.clone().files {
             let x = PathBuf::from(name);
             if x.file_stem() == file.file_stem() {
-                return Some(track.join(x));
+                return Some((track.join(x), contents));
             }
         }
         if let Some(p) = file.parent() {

@@ -7,7 +7,7 @@ pub struct Args {
     #[clap(subcommand)]
     pub command: Command,
 
-    #[clap(short, long, value_parser, default_value="span.yml", global=true)]
+    #[clap(short, long, value_parser, default_value = "span.yml", global = true)]
     pub config: PathBuf,
 }
 
@@ -15,21 +15,20 @@ pub struct Args {
 pub enum Command {
     Build {
         /// Path to source files.
-        #[clap(default_value=".", forbid_empty_values=true)]
+        #[clap(default_value = ".", forbid_empty_values = true)]
         input: PathBuf,
 
         /// Path to output folder.
-        #[clap(default_value="./output", forbid_empty_values=true)]
+        #[clap(default_value = "./output", forbid_empty_values = true)]
         output: PathBuf,
     },
     Serve {
         /// Path to source files.
-        #[clap(default_value=".", forbid_empty_values=true)]
+        #[clap(default_value = ".", forbid_empty_values = true)]
         input: PathBuf,
 
         /// Port to run the web server on.
-        #[clap(short, long, value_parser, default_value_t=3000)]
+        #[clap(short, long, value_parser, default_value_t = 3000)]
         port: u16,
-    }
+    },
 }
-

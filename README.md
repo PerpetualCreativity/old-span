@@ -72,7 +72,19 @@ You can always override this logic by specifying a full path (starting with `tem
 
 **Snippet logic**: Snippet logic is very similar to template logic, and uses the name given to match against possible snippets. Using the example folder structure, files in `content/` use `snippets/navbar.html`, files in `content/blog/` use `snippets/blog/navbar.html`, but files in `content/notes/` use `snippets/navbar.html` because only the parent has a matching snippet.
 
-You can always override this logic by specifying a full path (starting with `snippets/`) to the snippet you want to use.
+## snippet syntax
+
+The syntax for snippets is similar to the Pandoc partial syntax. To use a snippet in a file use `$%%{snippet_name(val1: Hello, val2: World)}`. In order to iterate over the metadata of files in a folder in `contents/` use `$%%{path/to/folder:snippet_name(val1: hello, val2: world)}` (this snippet will be called once for every file that is an immediate child of the folder, with `data` passed in). The metadata is taken from the YAML metadata block at the top of the file (the same block that Pandoc uses). Example snippet below:
+
+```
+### $%{data.title}
+
+*${data.date}*, $%{data.author}
+
+$%{data.description}
+
+$%{val1} | $%{val2}
+```
 
 ## bare minimum layout
 

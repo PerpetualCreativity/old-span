@@ -1,11 +1,14 @@
 use clap::Parser;
-use std::{fs, env, path};
+use std::{env, fs, path};
 
-mod vfs;
 mod args;
-mod config;
 mod build;
-mod errors { error_chain::error_chain!{} }
+mod config;
+mod snippets;
+mod vfs;
+mod errors {
+    error_chain::error_chain! {}
+}
 
 use errors::*;
 
@@ -26,30 +29,34 @@ fn main() {
     }
 }
 
-fn run() -> Result <()> {
+fn run() -> Result<()> {
     let args = args::Args::parse();
     match args.command {
-        args::Command::Build{ input, output } => {
+        args::Command::Build { input, output } => {
             let cwd = env::current_dir().chain_err(|| "could not access current directory")?;
-            env::set_current_dir(input.clone()).chain_err(|| format!("could not set directory to {:?}", input))?;
+            env::set_current_dir(input.clone())
+                .chain_err(|| format!("could not set directory to {:?}", input))?;
             let source = vfs::Folder::read(path::PathBuf::from("."))?;
-            let config_file = fs::File::open("./span.yml").chain_err(|| "could not open ./span.yml")?;
-            let config = serde_yaml::from_reader(config_file).chain_err(|| "./span.yml contains invalid config syntax")?;
+            let config_file =
+                fs::File::open("./span.yml").chain_err(|| "could not open ./span.yml")?;
+            let config = serde_yaml::from_reader(config_file)
+                .chain_err(|| "./span.yml contains invalid config syntax")?;
             let result = build::build(source, config)?;
-            env::set_current_dir(cwd).chain_err(|| format!("could not set directory to {:?}", input))?;
+            env::set_current_dir(cwd)
+                .chain_err(|| format!("could not set directory to {:?}", input))?;
             if fs::metadata(output.clone()).is_ok() {
-                fs::remove_dir_all(output.clone()).chain_err(|| format!(
-                    "could not delete previous output at {:?}",
-                    output.clone()
-                ))?;
+                fs::remove_dir_all(output.clone()).chain_err(|| {
+                    format!("could not delete previous output at {:?}", output.clone())
+                })?;
             }
-            fs::create_dir(output.clone()).chain_err(|| format!(
-                "could not create output directory {:?}",
-                output.clone()
-            ))?;
-            env::set_current_dir(output.clone()).chain_err(|| format!("could not set directory to {:?}", output))?;
+            fs::create_dir(output.clone())
+                .chain_err(|| format!("could not create output directory {:?}", output.clone()))?;
+            env::set_current_dir(output.clone())
+                .chain_err(|| format!("could not set directory to {:?}", output))?;
             result.write(output)
-        },
-        args::Command::Serve{ input: _, port: _ } => error_chain::bail!("serve is not implemented yet"),
+        }
+        args::Command::Serve { input: _, port: _ } => {
+            error_chain::bail!("serve is not implemented yet")
+        }
     }
 }

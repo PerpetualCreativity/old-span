@@ -1,5 +1,6 @@
 use crate::config;
 use crate::errors::*;
+use crate::snippets;
 use crate::vfs::Folder;
 use error_chain::bail;
 use std::ffi::OsString;
@@ -39,7 +40,8 @@ fn run_command(command: String, stdin: Vec<u8>, err_context: String) -> Result<O
     c.args(args);
 
     if let Some(path) = stdin_file {
-        fs::write(path, stdin.clone()).chain_err(|| format!("failed to write to temporary input file"))?;
+        fs::write(path, stdin.clone())
+            .chain_err(|| format!("failed to write to temporary input file"))?;
     }
 
     let mut child = c
@@ -65,7 +67,8 @@ fn run_command(command: String, stdin: Vec<u8>, err_context: String) -> Result<O
 
     if let Ok(ref mut w) = output {
         if let Some(path) = stdout_file {
-            w.stdout = fs::read(path).chain_err(|| format!("failed to read from temporary output file"))?;
+            w.stdout = fs::read(path)
+                .chain_err(|| format!("failed to read from temporary output file"))?;
         }
     }
     output
@@ -88,24 +91,24 @@ pub fn pandoc(
         .folders
         .get(&OsString::from("templates"))
         .chain_err(|| "Could not find folder 'templates'")?;
+    let snippets_fs = folder
+        .folders
+        .get(&OsString::from("snippets"))
+        .chain_err(|| "Could not find folder 'snippets'")?;
     contents_fs
         .clone()
         .map(PathBuf::new(), &mut |filepath, contents| {
-            let mut template = folder.clone().path;
-            template.push("templates");
+            let mut template = templates_fs.clone().path;
             let mut find_filepath: PathBuf = filepath.iter().skip(2).collect();
             template.push(match templates_fs.find(find_filepath.clone()) {
                 None => {
                     find_filepath.set_file_name(default.clone());
                     match templates_fs.find(find_filepath.clone()) {
-                        None => bail!(format!(
-                            "failed to find a matching template for {:?}",
-                            find_filepath
-                        )),
-                        Some(fp) => fp,
+                        None => bail!("failed to find a matching template for {:?}", find_filepath),
+                        Some((fp, _)) => fp,
                     }
                 }
-                Some(fp) => fp,
+                Some((fp, _)) => fp,
             });
             let err_context = format!(
                 ", while processing file {:?}, using template {:?}",
@@ -132,14 +135,18 @@ pub fn pandoc(
                 }
             }
 
-            let output = run_command(child, contents, err_context.clone())?;
+            let output = run_command(
+                child,
+                snippets::Snippet::process_contents(snippets_fs, filepath.clone(), contents)?,
+                err_context.clone(),
+            )?;
 
             if !output.stderr.is_empty() {
-                bail!(format!(
+                bail!(
                     "error from pandoc{}:\n{}",
                     err_context,
                     String::from_utf8_lossy(&output.stderr),
-                ))
+                )
             }
 
             Ok(Some((
@@ -167,26 +174,26 @@ pub fn build(folder: Folder, config: config::Config) -> Result<Folder> {
                 let output = run_command(pr.command.clone(), c.clone(), err_context.clone())?;
                 if pr.error_on != "none" {
                     if pr.error_on == "stderr" && !output.stderr.is_empty() {
-                        bail!(format!(
+                        bail!(
                             "error from pre-run command ({}) {}:\n  {}",
                             pr.command,
                             err_context,
                             String::from_utf8_lossy(&output.stderr),
-                        ))
+                        )
                     } else if pr.error_on == "stdout" && !output.stdout.is_empty() {
-                        bail!(format!(
+                        bail!(
                             "error from pre-run command ({}) {}:\n  {}",
                             pr.command,
                             err_context,
                             String::from_utf8_lossy(&output.stdout),
-                        ))
+                        )
                     } else if pr.error_on == "status" && output.status.success() {
-                        bail!(format!(
+                        bail!(
                             "error from pre-run command ({}) {}:\n  {}",
                             pr.command,
                             err_context,
                             String::from_utf8_lossy(&output.stdout),
-                        ))
+                        )
                     }
                 }
                 if pr.replace {
