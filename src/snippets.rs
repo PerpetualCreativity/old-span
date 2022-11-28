@@ -18,7 +18,7 @@ pub struct Snippet {
 impl Snippet {
     pub fn process_contents(fs: &Folder, filepath: PathBuf, contents: Vec<u8>) -> Result<Vec<u8>> {
         lazy_static! {
-            static ref RE: Regex = Regex::new(r"\$%%{(.*:)?(.+)\(([\w, ]*)\)}").unwrap();
+            static ref RE: Regex = Regex::new(r"\$%%\{(.*:)?(.+)\(([\w, ]*)\)\}").unwrap();
             // full example $%%{path/to/folder:snippet(val1: x, val2: y)}
             // group 1 = path/to/folder:
             // group 2 = snippet
@@ -161,7 +161,7 @@ impl Snippet {
 
     fn process_args(self) -> Result<String> {
         lazy_static! {
-            static ref RE: Regex = Regex::new(r"\$%{(.+)}").unwrap();
+            static ref RE: Regex = Regex::new(r"\$%\{(.+)\}").unwrap();
         }
         let mut errors = Vec::new();
         let x = RE
