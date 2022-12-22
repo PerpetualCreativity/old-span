@@ -2,8 +2,9 @@ use crate::errors::*;
 use error_chain::bail;
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
+use serde_yaml::{Mapping, Value};
 use std::io::BufRead;
-use std::{collections::HashMap, path::PathBuf};
+use std::path::PathBuf;
 
 use crate::vfs::Folder;
 
@@ -12,7 +13,7 @@ pub struct Snippet {
     name: String,
     contents: Vec<u8>,
     metadata_path: Option<String>,
-    parameters: HashMap<String, String>,
+    parameters: Mapping,
 }
 
 impl Snippet {
@@ -80,26 +81,19 @@ impl Snippet {
             },
             parameters: match matches.get(4) {
                 Some(p) => {
-                    let params = p
-                        .as_str()
-                        .split(",")
-                        .map(|x| x.splitn(2, ":"))
-                        .map(|mut x| (x.next(), x.next()))
-                        .map(|x| match x {
-                            (_, None) | (None, _) => Err("failed to parse parameters"),
-                            (Some(px1), Some(px2)) => Ok((px1, px2)),
-                        });
-                    for x in params.clone() {
-                        if let Err(e) = x {
-                            bail!(e);
-                        }
+                    let mut params = Mapping::new();
+                    for x in p.as_str().split(",") {
+                        let mut name_args = x.splitn(2, ":");
+                        let name = name_args.next().ok_or("failed to parse parameters")?;
+                        let arg = name_args.next().ok_or("failed to parse parameters")?;
+                        params.insert(
+                            Value::String(name.to_string()),
+                            Value::String(arg.to_string()),
+                        );
                     }
                     params
-                        .map(|x| x.unwrap())
-                        .map(|(x1, x2)| (x1.to_string(), x2.to_string()))
-                        .collect::<HashMap<String, String>>()
                 }
-                None => HashMap::new(),
+                None => Mapping::new(),
             },
             contents: Vec::new(),
         })
@@ -142,7 +136,7 @@ impl Snippet {
                     &vec![mp.to_owned() + "/*"],
                     &mut |_, c| {
                         let metadata = Snippet::extract_metadata(c)?;
-                        let data_map: HashMap<String, String> = serde_yaml::from_str(&metadata)
+                        let data_map: Mapping = serde_yaml::from_str(&metadata)
                             .chain_err(|| "Failed to parse metadata")?;
                         let mut temp = self.clone();
                         temp.parameters.extend(data_map);
@@ -169,13 +163,63 @@ impl Snippet {
                 std::str::from_utf8(&self.contents)
                     .chain_err(|| "Expected snippet contents to be UTF8")?,
                 |m: &Captures| match m.get(1) {
-                    Some(x) => match self.parameters.get(x.as_str()) {
-                        None => {
-                            errors.push(format!("Argument list missing key {}", x.as_str()));
-                            "".to_string()
+                    Some(mat) => {
+                        let mut current: Value = Value::Mapping(self.parameters.clone());
+                        for v in mat.as_str().split(".") {
+                            let gr;
+                            let k = v.parse::<usize>();
+                            match k {
+                                Ok(x) => gr = current.get(x),
+                                Err(_) => gr = current.get(v),
+                            }
+
+                            match gr {
+                                None | Some(Value::Null) => {
+                                    errors.push(format!(
+                                        "Key {} does not exist (part of key chain \"{}\")",
+                                        v,
+                                        mat.as_str()
+                                    ));
+                                    return "".to_string();
+                                }
+                                Some(Value::Tagged(x)) => current = x.clone().value,
+                                Some(x) => current = x.clone(),
+                            }
                         }
-                        Some(v) => v.clone(),
-                    },
+
+                        while let Value::Tagged(x) = current {
+                            // unwrap tagged value
+                            current = x.value;
+                        }
+
+                        match current {
+                            Value::Null => "".to_string(),
+                            Value::Bool(x) => x.to_string(),
+                            Value::Number(x) => x.to_string(),
+                            Value::String(x) => x,
+                            Value::Sequence(x) => {
+                                errors.push(format!(
+                                    "Value is a sequence and therefore cannot be treated like a string: {:#?}",
+                                    x,
+                                ));
+                                "".to_string()
+                            },
+                            Value::Mapping(x) => {
+                                errors.push(format!(
+                                    "Value is a mapping and therefore cannot be treated like a string: {:#?}",
+                                    x,
+                                ));
+                                "".to_string()
+                            },
+                            Value::Tagged(x) => {
+                                errors.push(format!(
+                                    "Value is a mapping and therefore cannot be treated like a string: {:#?}",
+                                    x,
+                                ));
+                                "".to_string()
+                            },
+                        }
+                    }
                     None => "".to_string(),
                 },
             )
