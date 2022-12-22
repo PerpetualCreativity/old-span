@@ -14,8 +14,8 @@ pub struct Folder {
 }
 
 impl Folder {
-    // Creates a new, empty, Folder, with the provided PathBuf.
-    // See read() for reading a dir from a file or folder.
+    /// Creates a new, empty, Folder, with the provided PathBuf.
+    /// See read() for reading a dir from a file or folder.
     pub fn new(path: PathBuf) -> Folder {
         Folder {
             path,
@@ -165,7 +165,7 @@ impl Folder {
     /// If the file already exists, overwrites the contents of the file.
     pub fn push(&mut self, fp: PathBuf, contents: Vec<u8>) -> Result<()> {
         let mut t = self;
-        for c in fp.parent() {
+        while let Some(c) = fp.parent() {
             let c = c.as_os_str();
             if !t.folders.contains_key(c) {
                 let p = &mut t.path;

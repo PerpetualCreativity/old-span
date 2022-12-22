@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 use crate::vfs::Folder;
 
+/// Contains snippet-related data.
 #[derive(Clone, Default)]
 pub struct Snippet {
     name: String,
@@ -17,6 +18,8 @@ pub struct Snippet {
 }
 
 impl Snippet {
+    /// Processes the contents of a source file that might include snippets.
+    /// Returns the source file with snippet syntax replaced by the expanded snippet.
     pub fn process_contents(fs: &Folder, filepath: PathBuf, contents: Vec<u8>) -> Result<Vec<u8>> {
         lazy_static! {
             static ref RE: Regex = Regex::new(r"\$%%\{(.*:)?(.+)\(([\w, ]*)\)\}").unwrap();
@@ -66,6 +69,7 @@ impl Snippet {
         Ok(result)
     }
 
+    /// Extracts snippet data from a regex match.
     fn extract_snippet(matches: &Captures) -> Result<Snippet> {
         Ok(Snippet {
             name: match matches.get(1) {
@@ -99,6 +103,7 @@ impl Snippet {
         })
     }
 
+    /// Gets and parses YAML metadata from the source file.
     fn extract_metadata(contents: Vec<u8>) -> Result<String> {
         let mut lines = contents.lines();
         match lines.next() {
@@ -128,6 +133,8 @@ impl Snippet {
         }
     }
 
+    /// Processes a snippet using the source folder.
+    /// Returns snippet expansion (including metadata expansion if necessary).
     fn process_snippet(self, fs: &Folder) -> Result<String> {
         match self.metadata_path {
             Some(ref mp) => {
