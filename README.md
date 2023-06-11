@@ -1,3 +1,5 @@
+# NB: This version is (also) now deprecated! Please use [the new version](https://github.com/PerpetualCreativity/span) instead!
+
 # Span - Pandoc-based static site generator
 
 Span is a [Pandoc](https://pandoc.org)-based static site generator.
